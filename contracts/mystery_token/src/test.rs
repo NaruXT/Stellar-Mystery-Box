@@ -1,7 +1,7 @@
 #![cfg(test)]
 
 use super::{MysteryToken, MysteryTokenClient};
-use soroban_sdk::{testutils::Address as _, Address, Env};
+use soroban_sdk::{testutils::Address as _, vec, Address, Env};
 
 fn setup() -> (Env, MysteryTokenClient<'static>, Address) {
     let env = Env::default();
@@ -79,4 +79,41 @@ fn test_transfer_with_fee_falla_sin_saldo() {
     let bob = Address::generate(&env);
 
     client.transfer_with_fee(&owner, &bob, &10_000_000);
+}
+
+// ─────────────────────────────────────────────────────────────
+//  Reto Builder — segundo poder: airdrop
+// ─────────────────────────────────────────────────────────────
+
+#[test]
+fn test_airdrop_reparte_el_mismo_monto_a_todos() {
+    let (env, client, owner) = setup();
+    let bob = Address::generate(&env);
+    let carol = Address::generate(&env);
+
+    client.airdrop(&owner, &vec![&env, bob.clone(), carol.clone()], &500);
+
+    assert_eq!(client.balance(&bob), 500);
+    assert_eq!(client.balance(&carol), 500);
+}
+
+#[test]
+fn test_airdrop_descuenta_el_total_al_emisor() {
+    let (env, client, owner) = setup();
+    let bob = Address::generate(&env);
+    let carol = Address::generate(&env);
+
+    client.airdrop(&owner, &vec![&env, bob.clone(), carol.clone()], &500);
+
+    assert_eq!(client.balance(&owner), 1_000_000 - 1_000);
+}
+
+#[test]
+#[should_panic(expected = "saldo insuficiente")]
+fn test_airdrop_falla_sin_saldo_para_todos() {
+    let (env, client, owner) = setup();
+    let bob = Address::generate(&env);
+    let carol = Address::generate(&env);
+
+    client.airdrop(&owner, &vec![&env, bob, carol], &10_000_000);
 }

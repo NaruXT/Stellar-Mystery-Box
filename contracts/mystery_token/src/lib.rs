@@ -11,7 +11,7 @@
 //  https://developers.stellar.org/docs/build/smart-contracts/getting-started
 // ══════════════════════════════════════════════════════════════════════
 
-use soroban_sdk::{contract, contractimpl, contracttype, Address, Env, String};
+use soroban_sdk::{contract, contractimpl, contracttype, Address, Env, String, Vec};
 
 // ╔═══════════════════════════════════════════════════════════╗
 // ║  🎁 RETO 1 — PERSONALIZA TU TOKEN MISTERIOSO               ║
@@ -138,6 +138,33 @@ impl MysteryToken {
 
         let supply = read_supply(&env);
         write_supply(&env, supply - fee);
+    }
+
+    // ╔═══════════════════════════════════════════════════════════╗
+    // ║  🛠 RETO BUILDER — SEGUNDO PODER: AIRDROP                  ║
+    // ║  Manda la misma cantidad a varias direcciones de una vez.  ║
+    // ╚═══════════════════════════════════════════════════════════╝
+    pub fn airdrop(env: Env, from: Address, to: Vec<Address>, amount: i128) {
+        from.require_auth();
+
+        if amount <= 0 {
+            panic!("el monto tiene que ser mayor a cero");
+        }
+
+        let total = amount
+            .checked_mul(to.len() as i128)
+            .expect("overflow calculando el total del airdrop");
+
+        let from_balance = read_balance(&env, &from);
+        if from_balance < total {
+            panic!("saldo insuficiente");
+        }
+
+        write_balance(&env, &from, from_balance - total);
+        for recipient in to.iter() {
+            let recipient_balance = read_balance(&env, &recipient);
+            write_balance(&env, &recipient, recipient_balance + amount);
+        }
     }
 }
 
